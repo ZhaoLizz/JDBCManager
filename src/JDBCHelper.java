@@ -146,6 +146,46 @@ public class JDBCHelper {
         return list;
     }
 
+    /**
+     * 利用反射机制查询单条记录
+     *
+     * @param sql
+     * @param params
+     * @param cls
+     * @param <T>
+     * @return 查询到的数据作为一个对象返回
+     * @throws Exception
+     */
+    public <T> T findSingleRefResult(String sql, List<Object> params, Class<T> cls) throws Exception {
+        T resultObject = null;
+        int index = 1;
+        pstmt = connection.prepareStatement(sql);
+        if (params != null && !params.isEmpty()) {
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(index++, params.get(i));
+            }
+        }
+        resultSet = pstmt.executeQuery();
+        ResultSetMetaData metaData = resultSet.getMetaData();
+        int cols_len = metaData.getColumnCount();
+        while (resultSet.next()) {
+            //通过反射创建一个实例
+            //查询出每一列的列名,然后根据反射来给泛型对象的域设定值,最后返回这个泛型对象
+            resultObject = cls.newInstance();
+            for (int i = 0; i < cols_len; i++) {
+                String cols_name = metaData.getColumnName(i + 1);
+                Object cols_value = resultSet.getObject(cols_name);
+                if (cols_value == null) {
+                    cols_value = "";
+                }
+                Field field = cls.getDeclaredField(cols_name);  //获取泛型类中定义的域
+                field.setAccessible(true);
+                field.set(resultObject, cols_value); //给某个域设值
+            }
+        }
+        return resultObject;
+    }
+
 
     /**
      * 通过反射机制查询多条记录
@@ -160,6 +200,8 @@ public class JDBCHelper {
         Class<?> baseDao = condition.getClass();
         List<Object> params = new ArrayList<>();
         Field[] fields = baseDao.getDeclaredFields();
+
+
         //通过参数对象的域构造查询条件
         for (int i = 0; i < fields.length; i++) {
             fields[i].setAccessible(true);
@@ -168,6 +210,7 @@ public class JDBCHelper {
             if (val != null) {
                 sql += fields[i].getName() + "=? and ";
                 params.add(val);
+
             }
         }
 
@@ -176,6 +219,16 @@ public class JDBCHelper {
             String table = condition.getClass().getName();
             sql = "select * from " + table.substring(table.lastIndexOf(".") + 1, table.length())
                     + " where " + sql;
+
+//            sql = "select * from Student where student_pw = ?";
+//            params.clear();
+//            params.add("123");
+
+            System.out.println(sql);
+        } else {
+            //处理查询全部行的条件
+            String table = condition.getClass().getName();
+            sql = "select * from " + table.substring(table.lastIndexOf(".") + 1, table.length());
             System.out.println(sql);
         }
 
@@ -332,5 +385,6 @@ public class JDBCHelper {
             e.printStackTrace();
         }
     }
+
 
 }

@@ -201,5 +201,8 @@ student.delete(new JDBCDao.DeleteListener() {
 
 ```
 
+### 释放连接
+`JDBCHelper.getInstance().releaseConn();`
+
 ## 致读者
 鄙人才疏学浅,难免有bug和疏漏。欢迎大家提PullRequest和Issue。项目用于交流，共同学习共同进步。
